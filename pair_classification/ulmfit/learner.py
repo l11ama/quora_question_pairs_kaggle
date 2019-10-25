@@ -17,7 +17,7 @@ class PairMultiBatchEncoder(MultiBatchEncoder):
         res1 = super().forward(input[0])
         res2 = super().forward(input[1])
         
-        return res1, res2, input[2].float()
+        return res1, res2
 
 
 def pool(input: Tuple[Tensor, Tensor, Tensor]):
@@ -61,12 +61,15 @@ class PairPoolingDSSMClassifier(PoolingLinearClassifier):
         enc2 = self.layers(enc2)
         
         x = torch.sum(enc1 * enc2, dim=-1)
-        x = torch.stack([-x, x], dim=-1)
+        x = torch.stack([torch.zeros_like(x), x], dim=-1)
         
         return x, concat(raw_out1, raw_out2), concat(out1, out2)
 
+
 NEG_INF = -10000
 TINY_FLOAT = 1e-6
+
+
 def mask_softmax(matrix, mask=None):
     """Perform softmax on length dimension with masking.
 
@@ -91,6 +94,7 @@ def mask_softmax(matrix, mask=None):
         result = F.softmax(matrix + mask_norm, dim=-1)
 
     return result
+
 
 class PairAttentionPoolingDSSMClassifier(PoolingLinearClassifier):
 
