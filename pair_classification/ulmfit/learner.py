@@ -88,7 +88,7 @@ def mask_softmax(matrix, mask=None):
     if mask is None:
         result = F.softmax(matrix, dim=-1)
     else:
-        mask_norm = ((1 - mask) * NEG_INF).to(matrix)
+        mask_norm = ((~mask) * NEG_INF).to(matrix)
         for i in range(matrix.dim() - mask_norm.dim()):
             mask_norm = mask_norm.unsqueeze(1)
         result = F.softmax(matrix + mask_norm, dim=-1)
@@ -198,6 +198,10 @@ class PairAttentionPoolingDSSMFC1Classifier(PoolingLinearClassifier):
 
 class PairPoolingLinearClassifier(PoolingLinearClassifier):
 
+    def __init__(self, layers: Collection[int], drops: Collection[float]):
+        layers[0] = layers[0] * 2
+        super().__init__(layers, drops)
+
     def forward(self, input) -> Tuple[Tensor, List[Tensor], List[Tensor]]:
         """input:Tuple[Tuple[Tensor,Tensor, Tensor],
                        Tuple[Tensor,Tensor, Tensor]] - encodings for pair of documents
@@ -206,7 +210,7 @@ class PairPoolingLinearClassifier(PoolingLinearClassifier):
         enc1, raw_out1, out1 = pool(input[0])
         enc2, raw_out2, out2 = pool(input[1])
 
-        x = self.layers(enc1 * enc2)
+        x = self.layers(torch.cat((enc1, enc2), dim=-1))
         
         return x, concat(raw_out1, raw_out2), concat(out1, out2)
 
