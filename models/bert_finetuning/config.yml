@@ -1,0 +1,30 @@
+# Dataset params
+path_to_data: './data/'                                  # Path to a folder with CSV files
+train_file_name: 'train.csv'                           # Train file name located in <path_to_data>
+validate: True                                         # Whether to run validation with a holdout set
+predict_for_test: True                                 # Whether to output predictions for the test set
+test_file_name: 'test.csv'                             # Test file name located in <path_to_data> (if needed)
+test_pred_file_name: 'test_preds.csv'                  # File to output predictions for the test set (if needed)
+text_col_name_1: 'question1'                                  # Name of a text field in each CSV file
+text_col_name_2: 'question2'                                  # Name of a text field in each CSV file
+label_col_name: 'is_duplicate'                                # Name of a label (tagret) field in train/validation CSV file
+
+# Bert training params
+path_to_pretrained_model: './models/bert_finetuning/uncased_L-12_H-768_A-12'    # Path to a folder with pretrained BERT model
+path_to_output_model: './models/bert_finetuning/'                              # Path to output fine-tuned BERT model
+output_model_file_name: 'bert_pytorch.bin'             # Output fine-tuned BERT model name
+max_seq_length: 150                                    # Maximal sequence length for BERT
+batch_size: 20                                         # Batch size
+epochs: 1                                              # Number of training epochs
+apex_mixed_precision: False                            # Whether to use nvidia apex mixed-precision training
+lrate: 2e-5                                            # Learning rate
+lrate_clf: 1e-4
+warmup: 0.05                                           # Percent of iterations to perform warmup
+accum_steps: 3                                         # Number of steps for batch accumulation
+
+# CUDA params
+torch_device: 0                                        # GPU device index to use
+
+# Other params
+toy: True                                              # Whether to perform a quick test - read first 500 lines from each file
+seed: 11                                               # Random seed
