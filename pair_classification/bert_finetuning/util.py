@@ -1,4 +1,5 @@
 import numpy as np
+import torch.nn.functional as F
 
 
 def sigmoid_np(x):
@@ -13,3 +14,32 @@ def sigmoid_np(x):
     top = np.ones_like(x)
     top[neg_mask] = z[neg_mask]
     return top / (1 + z)
+
+NEG_INF = -10000
+TINY_FLOAT = 1e-6
+
+
+def mask_softmax(matrix, mask=None):
+    """Perform softmax on length dimension with masking.
+
+    Parameters
+    ----------
+    matrix: torch.float, shape [batch_size, .., max_len]
+    mask: torch.long, shape [batch_size, max_len]
+        Mask tensor for sequence.
+
+    Returns
+    -------
+    output: torch.float, shape [batch_size, .., max_len]
+        Normalized output in length dimension.
+    """
+
+    if mask is None:
+        result = F.softmax(matrix, dim=-1)
+    else:
+        mask_norm = ((~mask) * NEG_INF).to(matrix)
+        for i in range(matrix.dim() - mask_norm.dim()):
+            mask_norm = mask_norm.unsqueeze(1)
+        result = F.softmax(matrix + mask_norm, dim=-1)
+
+    return result

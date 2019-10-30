@@ -13,7 +13,7 @@ label_col_name: 'is_duplicate'                                # Name of a label 
 path_to_pretrained_model: './models/bert_finetuning/uncased_L-12_H-768_A-12'    # Path to a folder with pretrained BERT model
 path_to_output_model: './models/bert_finetuning/'                              # Path to output fine-tuned BERT model
 output_model_file_name: 'bert_pytorch.bin'             # Output fine-tuned BERT model name
-max_seq_length: 150                                    # Maximal sequence length for BERT
+max_seq_length: 200                                    # Maximal sequence length for BERT
 batch_size: 20                                         # Batch size
 epochs: 1                                              # Number of training epochs
 apex_mixed_precision: False                            # Whether to use nvidia apex mixed-precision training

@@ -110,10 +110,9 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
     # Make sure all text values are strings
     train_df[text_col_name_1] = train_df[text_col_name_1].astype(str).fillna('DUMMY_VALUE')
     train_df[text_col_name_2] = train_df[text_col_name_2].astype(str).fillna('DUMMY_VALUE')
+    train_df['pair'] = train_df[text_col_name_1] + " Q_SEPARATOR " + train_df[text_col_name_2]
 
-    X_train_left = convert_lines(train_df[text_col_name_1], max_seq_length, tokenizer)
-    X_train_right = convert_lines(train_df[text_col_name_2], max_seq_length, tokenizer)
-    X_train = np.stack([X_train_left, X_train_right], axis=-1)
+    X_train = convert_lines(train_df['pair'], max_seq_length, tokenizer)
 
     label_encoder = LabelEncoder().fit(train_df[label_col_name])
     y_train = label_encoder.transform(train_df[label_col_name])
@@ -278,7 +277,7 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
                 optimizer.step()  # Now we can do an optimizer step
                 optimizer.zero_grad()
 
-            lossf = 0.9 * lossf + 0.1 * loss.item() if lossf else loss.item()
+            lossf = 0.96 * lossf + 0.04 * loss.item() if lossf else loss.item()
             tk0.set_postfix(loss=lossf)
 
             avg_loss += loss.item() / len(train_loader)
