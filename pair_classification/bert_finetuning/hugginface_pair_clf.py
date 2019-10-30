@@ -5,7 +5,7 @@ import torch
 
 class BertForSequencePairClassification(BertForSequenceClassification):
 
-    def __init__(self, config, num_labels=1):
+    def __init__(self, config, lin_dim, lin_dropout_prob, num_labels=1):
         super(BertForSequenceClassification, self).__init__(config)
         self.num_labels = num_labels
 
@@ -13,15 +13,15 @@ class BertForSequencePairClassification(BertForSequenceClassification):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.classifier = nn.Sequential(
-            nn.Linear(2 * config.hidden_size, config.lin_dim),
+            nn.Linear(2 * config.hidden_size, lin_dim),
             nn.ReLU(inplace=True),
-            nn.BatchNorm1d(config.lin_dim),
-            nn.Dropout(p=config.lin_dropout_prob),
-            nn.Linear(config.lin_dim, config.lin_dim//4),
+            nn.BatchNorm1d(lin_dim),
+            nn.Dropout(p=lin_dropout_prob),
+            nn.Linear(lin_dim, lin_dim//4),
             nn.ReLU(inplace=True),
-            nn.BatchNorm1d(config.lin_dim//4),
-            nn.Dropout(p=config.lin_dropout_prob),
-            nn.Linear(config.lin_dim//4, num_labels)
+            nn.BatchNorm1d(lin_dim//4),
+            nn.Dropout(p=lin_dropout_prob),
+            nn.Linear(lin_dim//4, num_labels)
         )
 
         self.apply(self.init_bert_weights)

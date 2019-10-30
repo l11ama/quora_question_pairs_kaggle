@@ -158,7 +158,7 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
 
 
 def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate_clf, batch_size, accum_steps,
-                     warmup, apex_mixed_precision, seed, device, train_loader):
+                     lin_dim, lin_dropout_prob, warmup, apex_mixed_precision, seed, device, train_loader):
     """
 
     :param path_to_pretrained_model:     Path to a folder with pretrained BERT model
@@ -168,6 +168,8 @@ def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate
     :param lrate_clf:                        ...
     :param batch_size:                   ...
     :param accum_steps:                  ...
+    :param lin_dim:
+    :param lin_dropout_prob:
     :param warmup:                       Percent of iterations to perform warmup
     :param apex_mixed_precision:         Whether to use nvidia apex mixed-precision training
     :param seed:                         ...
@@ -187,6 +189,8 @@ def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate
     seed_everything(seed)
 
     model = BertForSequencePairClassification.from_pretrained(path_to_pretrained_model,
+                                                              lin_dim=lin_dim,
+                                                              lin_dropout_prob=lin_dropout_prob,
                                                               cache_dir=None,
                                                               num_labels=1)
     model.zero_grad()
@@ -275,6 +279,7 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
                 optimizer.zero_grad()
 
             lossf = 0.9 * lossf + 0.1 * loss.item() if lossf else loss.item()
+            tk0.set_postfix(loss=lossf)
 
             avg_loss += loss.item() / len(train_loader)
 
@@ -379,7 +384,10 @@ if __name__ == '__main__':
             lrate=config['lrate'],
             lrate_clf=config['lrate_clf'],
             batch_size=config['batch_size'],
-            accum_steps=config['accum_steps'], warmup=config['warmup'],
+            accum_steps=config['accum_steps'],
+            lin_dim=config['lin_dim'],
+            lin_dropout_prob=config['lin_dropout_prob'],
+            warmup=config['warmup'],
             apex_mixed_precision=config['apex_mixed_precision'],
             seed=config['seed'], device=device, train_loader=train_loader
         )

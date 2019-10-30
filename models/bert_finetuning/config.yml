@@ -21,6 +21,9 @@ lrate: 2e-5                                            # Learning rate
 lrate_clf: 1e-4
 warmup: 0.05                                           # Percent of iterations to perform warmup
 accum_steps: 3                                         # Number of steps for batch accumulation
+lin_dim: 256 # clf hidden layer dim
+lin_dropout_prob: 0.15  # clf dropout
+
 
 # CUDA params
 torch_device: 0                                        # GPU device index to use
