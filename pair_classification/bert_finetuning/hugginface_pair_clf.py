@@ -40,7 +40,6 @@ class BertForSequencePairClassification(BertForSequenceClassification):
             return logits
 
 
-
 class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
 
     def __init__(self, config, lin_dim, lin_dropout_prob, num_labels=1):
@@ -51,15 +50,17 @@ class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.classifier = nn.Sequential(
-            nn.Linear(2 * config.hidden_size, lin_dim),
+            nn.Linear(config.hidden_size, lin_dim),
             nn.ReLU(inplace=True),
             nn.BatchNorm1d(lin_dim),
             nn.Dropout(p=lin_dropout_prob),
             nn.Linear(lin_dim, lin_dim//2),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm1d(lin_dim//2),
+            nn.ReLU(inplace=True))
+
+        self.pair_classifier = nn.Sequential(
+            nn.BatchNorm1d(lin_dim),
             nn.Dropout(p=lin_dropout_prob),
-            nn.Linear(lin_dim//2, num_labels)
+            nn.Linear(lin_dim, num_labels)
         )
 
         self.apply(self.init_bert_weights)
@@ -76,10 +77,15 @@ class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
                                            token_type_ids=token_type_ids,
                                            output_all_encoded_layers=False)
 
-        pooled_outputs = torch.cat((pooled_output_left, pooled_output_right), dim=1)
+        output_left = self.dropout(pooled_output_left)
+        output_right = self.dropout(pooled_output_right)
 
-        pooled_outputs = self.dropout(pooled_outputs)
-        logits = self.classifier(pooled_outputs)
+        output_left = self.classifier(output_left)
+        output_right = self.classifier(output_right)
+
+        outputs = torch.cat((output_left, output_right), dim=1)
+
+        logits = self.pair_classifier(outputs)
 
         if labels is not None:
             loss_fct = nn.BCEWithLogitsLoss()

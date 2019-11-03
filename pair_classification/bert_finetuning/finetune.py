@@ -75,7 +75,7 @@ def convert_lines(example, max_seq_length, tokenizer):
 
 def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_for_test, test_file_name,
                               text_col_name_1, text_col_name_2, label_col_name, path_to_pretrained_model,
-                              max_seq_length, batch_size, toy):
+                              max_seq_length, batch_size, toy, dssm=False):
     """
 
     :param path_to_data:               Path to a folder with CSV files
@@ -110,9 +110,14 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
     # Make sure all text values are strings
     train_df[text_col_name_1] = train_df[text_col_name_1].astype(str).fillna('DUMMY_VALUE')
     train_df[text_col_name_2] = train_df[text_col_name_2].astype(str).fillna('DUMMY_VALUE')
-    train_df['pair'] = train_df[text_col_name_1] + " Q_SEPARATOR " + train_df[text_col_name_2]
 
-    X_train = convert_lines(train_df['pair'], max_seq_length, tokenizer)
+    if dssm:
+        X_train_left = convert_lines(train_df[text_col_name_1], max_seq_length, tokenizer)
+        X_train_right = convert_lines(train_df[text_col_name_2], max_seq_length, tokenizer)
+        X_train = np.stack([X_train_left, X_train_right], axis=-1)
+    else:
+        train_df['pair'] = train_df[text_col_name_1] + " Q_SEPARATOR " + train_df[text_col_name_2]
+        X_train = convert_lines(train_df['pair'], max_seq_length, tokenizer)
 
     label_encoder = LabelEncoder().fit(train_df[label_col_name])
     y_train = label_encoder.transform(train_df[label_col_name])
@@ -145,9 +150,13 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
         test_df[text_col_name_1] = test_df[text_col_name_1].astype(str).fillna('DUMMY_VALUE')
         test_df[text_col_name_2] = test_df[text_col_name_2].astype(str).fillna('DUMMY_VALUE')
 
-        X_test_left = convert_lines(test_df[text_col_name_1], max_seq_length, tokenizer)
-        X_test_right = convert_lines(test_df[text_col_name_2], max_seq_length, tokenizer)
-        X_test = np.stack([X_test_left, X_test_right], axis=-1)
+        if dssm:
+            X_test_left = convert_lines(test_df[text_col_name_1], max_seq_length, tokenizer)
+            X_test_right = convert_lines(test_df[text_col_name_2], max_seq_length, tokenizer)
+            X_test = np.stack([X_test_left, X_test_right], axis=-1)
+        else:
+            test_df['pair'] = test_df[text_col_name_1] + " Q_SEPARATOR " + test_df[text_col_name_2]
+            X_test = convert_lines(test_df['pair'], max_seq_length, tokenizer)
 
         test_dataset = torch.utils.data.TensorDataset(torch.tensor(X_test, dtype=torch.long))
 
@@ -157,7 +166,8 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
 
 
 def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate_clf, batch_size, accum_steps,
-                     lin_dim, lin_dropout_prob, warmup, apex_mixed_precision, seed, device, train_loader):
+                     lin_dim, lin_dropout_prob, warmup, apex_mixed_precision, seed, device, train_loader,
+                     clf_class=BertForSequencePairClassification):
     """
 
     :param path_to_pretrained_model:     Path to a folder with pretrained BERT model
@@ -173,7 +183,8 @@ def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate
     :param apex_mixed_precision:         Whether to use nvidia apex mixed-precision training
     :param seed:                         ...
     :param device:                       ...
-    :param train_loader:
+    :param train_loader:                 ...
+    :param clf_class:                    ...
     :return: model, optimizer            PyTorch model and optimizer
     """
 
@@ -187,11 +198,11 @@ def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate
 
     seed_everything(seed)
 
-    model = BertForSequencePairClassification.from_pretrained(path_to_pretrained_model,
-                                                              lin_dim=lin_dim,
-                                                              lin_dropout_prob=lin_dropout_prob,
-                                                              cache_dir=None,
-                                                              num_labels=1)
+    model = clf_class.from_pretrained(path_to_pretrained_model,
+                                      lin_dim=lin_dim,
+                                      lin_dropout_prob=lin_dropout_prob,
+                                      cache_dir=None,
+                                      num_labels=1)
     model.zero_grad()
 
     model = model.to(device)
@@ -261,7 +272,7 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
 
         avg_loss = 0.
         lossf = None
-        tk0 = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
+        tk0 = enumerate(train_loader)
         optimizer.zero_grad()
         for i, (x_batch, y_batch) in tk0:
             y_pred = model(x_batch.to(device),
@@ -278,7 +289,6 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
                 optimizer.zero_grad()
 
             lossf = 0.96 * lossf + 0.04 * loss.item() if lossf else loss.item()
-            tk0.set_postfix(loss=lossf)
 
             avg_loss += loss.item() / len(train_loader)
 
@@ -315,7 +325,7 @@ def validate(torch_loader, model, batch_size, class_names, device):
 
     val_pred_probs = np.zeros([len(torch_loader.dataset)])
 
-    for i, (x_batch, _) in enumerate(tqdm(torch_loader)):
+    for i, (x_batch, _) in enumerate(torch_loader):
         pred = model(x_batch.to(device), attention_mask=(x_batch > 0).to(device), labels=None)
         val_pred_probs[i * batch_size:(i + 1) * batch_size] = pred.detach().cpu().numpy()
 
@@ -346,7 +356,7 @@ def predict_for_test(torch_loader, model, batch_size, class_names, test_pred_fil
 
     test_pred_probs = np.zeros([len(torch_loader.dataset)])
 
-    for i, (x_batch,) in enumerate(tqdm(torch_loader)):
+    for i, (x_batch,) in enumerate(torch_loader):
         pred = model(x_batch.to(device), attention_mask=(x_batch > 0).to(device), labels=None)
         test_pred_probs[i * batch_size:(i + 1) * batch_size] = pred.detach().cpu().numpy()
 
