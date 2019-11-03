@@ -1,5 +1,8 @@
+import sys
+
 import numpy as np
 import torch.nn.functional as F
+from tqdm import tqdm, TqdmDeprecationWarning
 
 
 def sigmoid_np(x):
@@ -43,3 +46,28 @@ def mask_softmax(matrix, mask=None):
         result = F.softmax(matrix + mask_norm, dim=-1)
 
     return result
+
+
+class tqdm_ext(tqdm):
+
+    N_PRINTS = 100
+
+    def __iter__(self):
+        """Backward-compatibility to use: for x in tqdm(iterable)"""
+
+        # Inlining instance variables as locals (speed optimisation)
+        iterable = self.iterable
+
+        print_every = self.total // self.N_PRINTS + 1
+        n = self.n
+        for obj in iterable:
+            yield obj
+            # Update and possibly print the progressbar.
+            n += 1
+            if n % print_every == 0:
+                print('Iter {}/{}. Postfix = {}'.format(n, self.total, self.postfix))
+
+        # Closing the progress bar.
+        # Update some internal variables for close().
+        self.n = n
+        self.close()

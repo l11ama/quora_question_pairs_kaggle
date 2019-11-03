@@ -28,7 +28,7 @@ from pytorch_pretrained_bert import convert_tf_checkpoint_to_pytorch
 from pytorch_pretrained_bert import BertTokenizer, BertAdam
 
 from pair_classification.bert_finetuning.hugginface_pair_clf import BertForSequencePairClassification
-from pair_classification.bert_finetuning.util import sigmoid_np
+from pair_classification.bert_finetuning.util import sigmoid_np, tqdm_ext
 
 
 def set_configs(path='config.yml'):
@@ -272,7 +272,7 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
 
         avg_loss = 0.
         lossf = None
-        tk0 = enumerate(train_loader)
+        tk0 = tqdm_ext(enumerate(train_loader), total=len(train_loader), leave=True)
         optimizer.zero_grad()
         for i, (x_batch, y_batch) in tk0:
             y_pred = model(x_batch.to(device),
@@ -289,9 +289,9 @@ def train(model, optimizer, epochs, accum_steps, apex_mixed_precision, output_mo
                 optimizer.zero_grad()
 
             lossf = 0.96 * lossf + 0.04 * loss.item() if lossf else loss.item()
+            tk0.set_postfix(loss=lossf, refresh=False)
 
             avg_loss += loss.item() / len(train_loader)
-
             loss_history.append(loss.item())
 
         if val_loader is not None:
@@ -325,7 +325,7 @@ def validate(torch_loader, model, batch_size, class_names, device):
 
     val_pred_probs = np.zeros([len(torch_loader.dataset)])
 
-    for i, (x_batch, _) in enumerate(torch_loader):
+    for i, (x_batch, _) in enumerate(tqdm_ext(torch_loader)):
         pred = model(x_batch.to(device), attention_mask=(x_batch > 0).to(device), labels=None)
         val_pred_probs[i * batch_size:(i + 1) * batch_size] = pred.detach().cpu().numpy()
 
@@ -356,7 +356,7 @@ def predict_for_test(torch_loader, model, batch_size, class_names, test_pred_fil
 
     test_pred_probs = np.zeros([len(torch_loader.dataset)])
 
-    for i, (x_batch,) in enumerate(torch_loader):
+    for i, (x_batch,) in enumerate(tqdm_ext(torch_loader)):
         pred = model(x_batch.to(device), attention_mask=(x_batch > 0).to(device), labels=None)
         test_pred_probs[i * batch_size:(i + 1) * batch_size] = pred.detach().cpu().numpy()
 
