@@ -73,7 +73,7 @@ def convert_lines(example, max_seq_length, tokenizer):
     return np.array(all_tokens)
 
 
-def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_for_test, test_file_name,
+def parse_data_to_bert_format(path_to_data, train_file_name, validate, predict_for_test, test_file_name,
                               text_col_name_1, text_col_name_2, label_col_name, path_to_pretrained_model,
                               max_seq_length, batch_size, toy, dssm=False):
     """
@@ -165,13 +165,12 @@ def parse_data_to_bert_format(path_to_data, train_file_name,  validate, predict_
     return train_loader, val_loader, test_loader, class_names
 
 
-def setup_bert_model(path_to_pretrained_model, num_classes, epochs, lrate, lrate_clf, batch_size, accum_steps,
+def setup_bert_model(path_to_pretrained_model, epochs, lrate, lrate_clf, batch_size, accum_steps,
                      lin_dim, lin_dropout_prob, warmup, apex_mixed_precision, seed, device, train_loader,
                      clf_class=BertForSequencePairClassification):
     """
 
     :param path_to_pretrained_model:     Path to a folder with pretrained BERT model
-    :param num_classes:                  Number of target classes in the training set
     :param epochs:                       ...
     :param lrate:                        ...
     :param lrate_clf:                        ...
@@ -389,7 +388,7 @@ if __name__ == '__main__':
     with timer('Setting up BERT model'):
         model, optimizer = setup_bert_model(
             path_to_pretrained_model=config['path_to_pretrained_model'],
-            num_classes=len(class_names), epochs=config['epochs'],
+            epochs=config['epochs'],
             lrate=config['lrate'],
             lrate_clf=config['lrate_clf'],
             batch_size=config['batch_size'],

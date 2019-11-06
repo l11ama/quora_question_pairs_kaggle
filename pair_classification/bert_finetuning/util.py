@@ -1,8 +1,46 @@
-import sys
-
 import numpy as np
 import torch.nn.functional as F
 from tqdm import tqdm, TqdmDeprecationWarning
+from contextlib import contextmanager
+import random
+import time
+import os
+
+import torch
+
+# nice way to report running times
+@contextmanager
+def timer(name):
+    t0 = time.time()
+    yield
+    print(f'[{name}] done in {time.time() - t0:.0f} s')
+
+
+# make results fully reproducible
+def seed_everything(seed=123):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+
+# Converting the lines to BERT format
+def convert_lines(example, max_seq_length, tokenizer):
+    max_seq_length -= 2
+    all_tokens = []
+    longer = 0
+    for text in tqdm(example):
+        tokens_a = tokenizer.tokenize(text)
+        if len(tokens_a) > max_seq_length:
+            tokens_a = tokens_a[:max_seq_length]
+            longer += 1
+        one_token = tokenizer.convert_tokens_to_ids(["[CLS]"] + tokens_a + ["[SEP]"]) + \
+                    [0] * (max_seq_length - len(tokens_a))
+        all_tokens.append(one_token)
+    print(f"There are {longer} lines longer than {max_seq_length}")
+    return np.array(all_tokens)
 
 
 def sigmoid_np(x):
