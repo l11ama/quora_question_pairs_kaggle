@@ -12,10 +12,10 @@ from matplotlib import pyplot as plt
 import torch
 import torch.utils.data
 
-from pytorch_pretrained_bert import BertTokenizer, BertAdam, convert_tf_checkpoint_to_pytorch
+from pytorch_pretrained_bert import BertTokenizer
 
 from pair_classification.bert_finetuning.finetune import set_configs, setup_bert_model
-from pair_classification.bert_finetuning.hugginface_pair_clf import BertForSequencePairClassificationTriplets
+from pair_classification.bert_finetuning.triplets.hugginface_pair_clf import BertForSequenceTripletsWithLinear
 from pair_classification.bert_finetuning.losses import TripletLoss
 from pair_classification.bert_finetuning.util import sigmoid_np, tqdm_ext, convert_lines, seed_everything, timer
 
@@ -148,7 +148,7 @@ if __name__ == '__main__':
             warmup=config['warmup'],
             apex_mixed_precision=config['apex_mixed_precision'],
             seed=config['seed'], device=device, train_loader=train_loader,
-            clf_class=BertForSequencePairClassificationTriplets
+            clf_class=BertForSequenceTripletsWithLinear
         )
 
     with timer('Training'):

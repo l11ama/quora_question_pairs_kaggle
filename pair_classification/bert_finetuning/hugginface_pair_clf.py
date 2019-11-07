@@ -1,5 +1,4 @@
 from pytorch_pretrained_bert import BertForSequenceClassification, BertModel
-from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 from torch import nn
 import torch
 
@@ -41,7 +40,7 @@ class BertForSequencePairClassification(BertForSequenceClassification):
             return logits
 
 
-class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
+class BertForSequencePairClassificationConcat(BertForSequenceClassification):
 
     def __init__(self, config, lin_dim, lin_dropout_prob, num_labels=1):
         super(BertForSequenceClassification, self).__init__(config)
@@ -96,10 +95,11 @@ class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
             return logits.squeeze(dim=1)
 
 
-class BertForSequencePairClassificationTriplets(BertPreTrainedModel):
+class BertForSequencePairClassificationDSSM(BertForSequenceClassification):
 
-    def __init__(self, config,  lin_dim, lin_dropout_prob, num_labels=1):
-        super().__init__(config)
+    def __init__(self, config, lin_dim, lin_dropout_prob, num_labels=1):
+        super(BertForSequenceClassification, self).__init__(config)
+        self.num_labels = num_labels
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -112,30 +112,39 @@ class BertForSequencePairClassificationTriplets(BertPreTrainedModel):
             nn.Linear(lin_dim, lin_dim//2),
             nn.ReLU(inplace=True))
 
-        # self.summation = nn.Linear(lin_dim//2, 1, bias=False)
-        # self.summation.weight.data.fill_(1)
+        self.pair_classifier = nn.Sequential(
+            nn.BatchNorm1d(lin_dim//2),
+            nn.Dropout(p=lin_dropout_prob),
+            nn.Linear(lin_dim//2, num_labels)
+        )
 
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
 
-        _, pooled_output_0 = self.bert(input_ids[:, :, 0],
-                                       attention_mask=attention_mask[:, :, 0],
-                                       token_type_ids=token_type_ids,
-                                       output_all_encoded_layers=False)
+        _, pooled_output_left = self.bert(input_ids[:, :, 0],
+                                          attention_mask=attention_mask[:, :, 0],
+                                          token_type_ids=token_type_ids,
+                                          output_all_encoded_layers=False)
 
-        _, pooled_output_1 = self.bert(input_ids[:, :, 1],
-                                       attention_mask=attention_mask[:, :, 1],
-                                       token_type_ids=token_type_ids,
-                                       output_all_encoded_layers=False)
+        _, pooled_output_right = self.bert(input_ids[:, :, 1],
+                                           attention_mask=attention_mask[:, :, 1],
+                                           token_type_ids=token_type_ids,
+                                           output_all_encoded_layers=False)
 
-        _, pooled_output_2 = self.bert(input_ids[:, :, 2],
-                                       attention_mask=attention_mask[:, :, 2],
-                                       token_type_ids=token_type_ids,
-                                       output_all_encoded_layers=False)
+        output_left = self.dropout(pooled_output_left)
+        output_right = self.dropout(pooled_output_right)
 
-        anchor = self.classifier(self.dropout(pooled_output_0))
-        pos = self.classifier(self.dropout(pooled_output_1))
-        neg = self.classifier(self.dropout(pooled_output_2))
+        output_left = self.classifier(output_left)
+        output_right = self.classifier(output_right)
 
-        return anchor, pos, neg
+        outputs = output_left * output_right
+
+        logits = self.pair_classifier(outputs)
+
+        if labels is not None:
+            loss_fct = nn.BCEWithLogitsLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            return loss
+        else:
+            return logits.squeeze(dim=1)
