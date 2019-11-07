@@ -180,7 +180,7 @@ class BertForSequencePairClassificationDSSMWithAttention(BertForSequenceClassifi
         self.apply(self.init_bert_weights)
 
     def attend_to_other_output(self, sequence_output, mask, pooled_output_other):
-        att = self.classifier_fc_attention(torch.tanh(sequence_output + pooled_output_other)).squeeze(-1)  # [b,msl,h*2]->[b,msl]
+        att = self.classifier_fc_attention(torch.tanh(sequence_output + pooled_output_other.unsqueeze(1))).squeeze(-1)  # [b,msl,h*2]->[b,msl]
         att = mask_softmax(att, mask)  # [b,msl]
         return torch.sum(att.unsqueeze(-1) * sequence_output, dim=1)  # [b,h*2]
 
