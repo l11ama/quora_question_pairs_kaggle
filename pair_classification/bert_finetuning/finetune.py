@@ -3,13 +3,8 @@ Fine-tune BERT model for text classification.
 
 """
 
-import os
 import sys
-import time
-import ruamel.yaml as yaml
-from contextlib import contextmanager
 from pathlib import Path
-import random
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -28,49 +23,8 @@ from pytorch_pretrained_bert import convert_tf_checkpoint_to_pytorch
 from pytorch_pretrained_bert import BertTokenizer, BertAdam
 
 from pair_classification.bert_finetuning.hugginface_pair_clf import BertForSequencePairClassification
-from pair_classification.bert_finetuning.util import sigmoid_np, tqdm_ext
-
-
-def set_configs(path='config.yml'):
-    with open(path) as f:
-        config = yaml.safe_load(f)
-
-    return config
-
-
-# nice way to report running times
-@contextmanager
-def timer(name):
-    t0 = time.time()
-    yield
-    print(f'[{name}] done in {time.time() - t0:.0f} s')
-
-
-# make results fully reproducible
-def seed_everything(seed=123):
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-
-
-# Converting the lines to BERT format
-def convert_lines(example, max_seq_length, tokenizer):
-    max_seq_length -= 2
-    all_tokens = []
-    longer = 0
-    for text in tqdm(example):
-        tokens_a = tokenizer.tokenize(text)
-        if len(tokens_a) > max_seq_length:
-            tokens_a = tokens_a[:max_seq_length]
-            longer += 1
-        one_token = tokenizer.convert_tokens_to_ids(["[CLS]"] + tokens_a + ["[SEP]"]) + \
-                    [0] * (max_seq_length - len(tokens_a))
-        all_tokens.append(one_token)
-    print(f"There are {longer} lines longer than {max_seq_length}")
-    return np.array(all_tokens)
+from pair_classification.bert_finetuning.util import sigmoid_np, tqdm_ext, seed_everything, convert_lines, set_configs, \
+    timer
 
 
 def parse_data_to_bert_format(path_to_data, train_file_name, validate, predict_for_test, test_file_name,
@@ -359,7 +313,8 @@ def predict_for_test(torch_loader, model, batch_size, class_names, test_pred_fil
         pred = model(x_batch.to(device), attention_mask=(x_batch > 0).to(device), labels=None)
         test_pred_probs[i * batch_size:(i + 1) * batch_size] = pred.detach().cpu().numpy()
 
-    pd.DataFrame(test_pred_probs).to_csv(test_pred_file_name, index=True, index_label='test_id')
+    test_preds_df = pd.DataFrame(sigmoid_np(test_pred_probs), columns=['is_duplicate'])
+    test_preds_df.to_csv(test_pred_file_name, index=True, index_label='test_id')
 
     return test_pred_probs
 

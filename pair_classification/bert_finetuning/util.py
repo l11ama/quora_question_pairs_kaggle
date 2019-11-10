@@ -1,12 +1,21 @@
 import numpy as np
 import torch.nn.functional as F
-from tqdm import tqdm, TqdmDeprecationWarning
+from tqdm import tqdm
 from contextlib import contextmanager
 import random
 import time
 import os
+import ruamel.yaml as yaml
 
 import torch
+
+
+def set_configs(path='config.yml'):
+    with open(path) as f:
+        config = yaml.safe_load(f)
+
+    return config
+
 
 # nice way to report running times
 @contextmanager

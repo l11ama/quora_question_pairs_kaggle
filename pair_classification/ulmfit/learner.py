@@ -111,15 +111,16 @@ class PairAttentionPoolingDSSMClassifier(PoolingLinearClassifier):
         self.layers = nn.Sequential(*mod_layers)
         self.fc_attention = nn.Linear(layers[0]//3, 1) #get top layer hidden size from lstm
 
-    def pool(self, input: Tuple[Tensor, Tensor, Tensor]):
+    def pool(self, input: Tuple[Tensor, Tensor, Tensor], input_other: Tuple[Tensor, Tensor, Tensor]):
         raw_outputs, outputs, mask = input
         output = outputs[-1]
+        output_other = input_other[1][-1]
+
         avg_pool = output.masked_fill(mask[:, :, None], 0).mean(dim=1)
         avg_pool *= output.size(1) / (output.size(1) - mask.type(avg_pool.dtype).sum(dim=1))[:, None]
         max_pool = output.masked_fill(mask[:, :, None], -float('inf')).max(dim=1)[0]
 
-
-        att = self.fc_attention(output).squeeze(-1)  # [b,msl,h*2]->[b,msl]
+        att = self.fc_attention(torch.tanh(output + output_other)).squeeze(-1)  # [b,msl,h*2]->[b,msl]
         att = mask_softmax(att, mask)  # [b,msl]
         r_att = torch.sum(att.unsqueeze(-1) * output, dim=1)  # [b,h*2]
 
@@ -131,8 +132,8 @@ class PairAttentionPoolingDSSMClassifier(PoolingLinearClassifier):
                        Tuple[Tensor,Tensor, Tensor]] - encodings for pair of documents
         """
 
-        enc1, raw_out1, out1 = self.pool(input[0])
-        enc2, raw_out2, out2 = self.pool(input[1])
+        enc1, raw_out1, out1 = self.pool(input[0], input[1])
+        enc2, raw_out2, out2 = self.pool(input[1], input[0])
 
         enc1 = self.layers(enc1)
         enc2 = self.layers(enc2)
@@ -158,20 +159,26 @@ class PairAttentionPoolingDSSMFC1Classifier(PoolingLinearClassifier):
         for n_in, n_out, p, actn in zip(layers[:-1], layers[1:], drops, activations):
             mod_layers += bn_drop_lin(n_in, n_out, p=p, actn=actn)
         self.layers = nn.Sequential(*mod_layers)
-        attention_size = layers[0]//3 #get top layer hidden size from lstm
-        self.fc_attention = nn.Linear(attention_size, 1)
+        hidden_size = layers[0]//3 #get top layer hidden size from lstm
+        attention_size = 256
+        self.key_layer = nn.Linear(hidden_size, attention_size, bias=False)
+        self.query_layer = nn.Linear(hidden_size, attention_size, bias=False)
+        self.fc_attention = nn.Linear(attention_size, 1, bias=False)
         
         self.pair_linear = nn.Linear(layers[-1], 1)
 
-    def pool(self, input: Tuple[Tensor, Tensor, Tensor]):
+    def pool(self, input: Tuple[Tensor, Tensor, Tensor], input_other: Tuple[Tensor, Tensor, Tensor]):
         raw_outputs, outputs, mask = input
         output = outputs[-1]
+        output_other = input_other[1][-1]
+
         avg_pool = output.masked_fill(mask[:, :, None], 0).mean(dim=1)
         avg_pool *= output.size(1) / (output.size(1) - mask.type(avg_pool.dtype).sum(dim=1))[:, None]
         max_pool = output.masked_fill(mask[:, :, None], -float('inf')).max(dim=1)[0]
 
-
-        att = self.fc_attention(output).squeeze(-1)  # [b,msl,h*2]->[b,msl]
+        query = self.query_layer(output_other)
+        proj_keys = self.key_layer(output)
+        att = self.fc_attention(torch.tanh(proj_keys + query)).squeeze(-1)  # [b,msl,h*2]->[b,msl]
         att = mask_softmax(att, mask)  # [b,msl]
         r_att = torch.sum(att.unsqueeze(-1) * output, dim=1)  # [b,h*2]
 
@@ -183,8 +190,8 @@ class PairAttentionPoolingDSSMFC1Classifier(PoolingLinearClassifier):
                        Tuple[Tensor,Tensor, Tensor]] - encodings for pair of documents
         """
 
-        enc1, raw_out1, out1 = self.pool(input[0])
-        enc2, raw_out2, out2 = self.pool(input[1])
+        enc1, raw_out1, out1 = self.pool(input[0], input[1])
+        enc2, raw_out2, out2 = self.pool(input[1], input[0])
 
         enc1 = self.layers(enc1)
         enc2 = self.layers(enc2)

@@ -10,9 +10,9 @@ path_to_pretrained_model: './models/bert_finetuning/uncased_L-12_H-768_A-12'    
 path_to_output_model: './models/bert_finetuning/'                              # Path to output fine-tuned BERT model
 output_model_file_name: 'bert_pytorch.bin'             # Output fine-tuned BERT model name
 max_seq_length: 150                                    # Maximal sequence length for BERT
-batch_size: 12                                         # Batch size
-epochs: 1                                              # Number of training epochs
-apex_mixed_precision: False                            # Whether to use nvidia apex mixed-precision training
+batch_size: 32                                         # Batch size
+epochs: 2                                              # Number of training epochs
+apex_mixed_precision: True                            # Whether to use nvidia apex mixed-precision training
 lrate: 2e-5                                            # Learning rate
 lrate_clf: 1e-4
 warmup: 0.05                                           # Percent of iterations to perform warmup
@@ -25,5 +25,5 @@ lin_dropout_prob: 0.15  # clf dropout
 torch_device: 0                                        # GPU device index to use
 
 # Other params
-toy: True                                              # Whether to perform a quick test - read first 500 lines from each file
+toy: False                                              # Whether to perform a quick test - read first 500 lines from each file
 seed: 11                                               # Random seed
