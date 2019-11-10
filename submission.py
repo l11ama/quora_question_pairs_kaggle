@@ -160,11 +160,16 @@ if __name__ == '__main__':
     config_metric_learning = set_configs('models/bert_finetuning/config_triplets.yml')
     device = torch.device(f"cuda:{config['torch_device']}")
 
-    # save csv with triplets for metric learning
+    print('Generate triplet train dataset...')
     save_triplets_train(config['path_to_data'] + config['train_file_name'],
                         config_metric_learning['path_to_data'] + config_metric_learning['train_file_name'],
                         seed=config['seed'])
+    print('Triplets saved.')
 
+    print('Start metric learning...')
     metric_learning(config_metric_learning, device)
+    print('Metric learning complete.')
 
+    print('Start pair classification...')
     pair_classification(config, device)
+    print('Submission saved')

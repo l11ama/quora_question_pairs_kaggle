@@ -17,8 +17,8 @@ max_seq_length: 150                                    # Maximal sequence length
 batch_size: 48                                         # Batch size
 epochs: 3                                              # Number of training epochs
 apex_mixed_precision: True                            # Whether to use nvidia apex mixed-precision training
-lrate: 8e-6                                            # Learning rate
-lrate_clf: 8e-6
+lrate: 2e-5                                            # Learning rate
+lrate_clf: 1e-4
 warmup: 0.05                                           # Percent of iterations to perform warmup
 accum_steps: 4                                         # Number of steps for batch accumulation
 lin_dim: 512 # clf hidden layer dim
