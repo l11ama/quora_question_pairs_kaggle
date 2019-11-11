@@ -69,16 +69,27 @@ python submission.py
 **Kaggle link**: https://www.kaggle.com/mfside
 
 * implemented in `submission.py`: 2 epochs metric learning + 1 epoch pair clf with freezed BERT + 3 epochs pair clf with unfreezed BERT.
-[Model on Google Drive](https://drive.google.com/open?id=1Yf0kEFhlt3JnlKgZgXlUW29IZLKGOimK)
+
+    [Model on Google Drive](https://drive.google.com/open?id=1Yf0kEFhlt3JnlKgZgXlUW29IZLKGOimK)
+
+    [Submission file](https://drive.google.com/open?id=1PM9lW8SivZuyzCC6tz3kKHemYEK642QA)
 
     `Private = 0.38092  Public = 0.37776`
     
-* finetune one more epoch with decreased lr. [Model on Google Drive](https://drive.google.com/open?id=1_f-7Rg73adwtOtXTjrrhhs_fm3UFgLQG)
+* finetune one more epoch with decreased lr. 
+
+    [Model on Google Drive](https://drive.google.com/open?id=1_f-7Rg73adwtOtXTjrrhhs_fm3UFgLQG)
+
+    [Submission file](https://drive.google.com/open?id=1ydQtBxB4m4OmnLqHmK3otdrkUUuz6b6j)
 
     `Private = 0.37830  Public = 0.37406`
     
-* finetune another one epoch with decreased lr and weighted loss (try to increase precision, balance of duplicate question in test is lower) [Model on Google Drive](https://drive.google.com/open?id=17RcXYzcO9kfqy4kdL8yzPFA6YXxWz8XD)
+* finetune another one epoch with decreased lr and weighted loss (try to increase precision, balance of duplicate question in test is lower) 
 
+    [Model on Google Drive](https://drive.google.com/open?id=17RcXYzcO9kfqy4kdL8yzPFA6YXxWz8XD)
+    
+    [Submission file](https://drive.google.com/open?id=1lgH5p8ZCLusO1U8YiGvgXXCDWlTAGdVG)
+    
     `Private = 0.36893 Public = 0.36465`
     
 ## Conclusions
@@ -106,6 +117,8 @@ _Ways to resolve:_
 
 **[Model on Google disk](https://drive.google.com/open?id=18sR-2ZxeMQlv516dhrByPru-ctA_Mpzz)**
 
+**[Submission file](https://drive.google.com/open?id=1KTYCfHuia2N8dxt7TZiUIXBHz4-PfaU9)**
+
 `Private = 0.33768 Public = 0.33507`
 
 ### ULMFiT
@@ -115,5 +128,7 @@ _Ways to resolve:_
 **[vocab on Google disk](https://drive.google.com/open?id=1ulopED1wsUFogG6B0IsKf4Ia1DXW13eS)**
 
 **[Model on Google disk](https://drive.google.com/open?id=1_Ww01R8IFonIyDpU4rSOYnELLyuZ3T_x)**
+
+**[Submission file](https://drive.google.com/open?id=1pHQ_RJ9_58_c9MbCsEUTf3fupx6IWWSd)**
 
 `Private = 0.36800 Public = 0.36714`
