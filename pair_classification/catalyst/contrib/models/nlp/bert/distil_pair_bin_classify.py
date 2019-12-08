@@ -4,7 +4,7 @@ from transformers import AutoModel, AutoConfig
 
 
 class DistilBertForSequencePairBinaryClassification(nn.Module):
-    def __init__(self, model_name):
+    def __init__(self, model_name, encoding_dim=128):
         super().__init__()
 
         config = AutoConfig.from_pretrained(
@@ -12,8 +12,8 @@ class DistilBertForSequencePairBinaryClassification(nn.Module):
 
         self.distilbert = AutoModel.from_pretrained(model_name,
                                                     config=config)
-        self.pre_classifier = nn.Linear(config.dim, config.dim)
-        self.classifier = nn.Linear(2 * config.dim, 1)
+        self.pre_classifier = nn.Linear(config.dim, encoding_dim)
+        self.classifier = nn.Linear(3 * encoding_dim, 1)
         self.dropout = nn.Dropout(config.seq_classif_dropout)
 
     def encode_sequence(self, features, mask):
@@ -31,11 +31,12 @@ class DistilBertForSequencePairBinaryClassification(nn.Module):
     def forward(self, features_left, mask_left, features_right, mask_right):
         output_left = self.encode_sequence(features_left, mask_left)
         output_right = self.encode_sequence(features_right, mask_right)
+        output_prod = output_left * output_right
 
-        concat_ouputs = torch.cat((output_left, output_right), dim=1)  # (bs, 2*dim)
-        concat_ouputs = nn.ReLU()(concat_ouputs)  # (bs, 2*dim)
+        concat_ouputs = torch.cat((output_left, output_right, output_prod), dim=1)  # (bs, 3*dim)
+        concat_ouputs = nn.ReLU()(concat_ouputs)  # (bs, 3*dim)
 
-        concat_ouputs = self.dropout(concat_ouputs)  # (bs, 2*dim)
+        concat_ouputs = self.dropout(concat_ouputs)  # (bs, 3*dim)
         logits = self.classifier(concat_ouputs)
 
         return logits
